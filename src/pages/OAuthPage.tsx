@@ -16,12 +16,15 @@ import iconGemini from '@/assets/icons/gemini.svg';
 import iconKimiLight from '@/assets/icons/kimi-light.svg';
 import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconQwen from '@/assets/icons/qwen.svg';
+import iconGithubCopilot from '@/assets/icons/github-copilot.svg';
 import iconIflow from '@/assets/icons/iflow.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 
 interface ProviderState {
   url?: string;
   state?: string;
+  userCode?: string;
+  verificationUrl?: string;
   status?: 'idle' | 'waiting' | 'success' | 'error';
   error?: string;
   polling?: boolean;
@@ -77,6 +80,7 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabe
   { id: 'anthropic', titleKey: 'auth_login.anthropic_oauth_title', hintKey: 'auth_login.anthropic_oauth_hint', urlLabelKey: 'auth_login.anthropic_oauth_url_label', icon: iconClaude },
   { id: 'antigravity', titleKey: 'auth_login.antigravity_oauth_title', hintKey: 'auth_login.antigravity_oauth_hint', urlLabelKey: 'auth_login.antigravity_oauth_url_label', icon: iconAntigravity },
   { id: 'gemini-cli', titleKey: 'auth_login.gemini_cli_oauth_title', hintKey: 'auth_login.gemini_cli_oauth_hint', urlLabelKey: 'auth_login.gemini_cli_oauth_url_label', icon: iconGemini },
+  { id: 'github-copilot', titleKey: 'auth_login.github_copilot_oauth_title', hintKey: 'auth_login.github_copilot_oauth_hint', urlLabelKey: 'auth_login.github_copilot_oauth_url_label', icon: iconGithubCopilot },
   { id: 'kimi', titleKey: 'auth_login.kimi_oauth_title', hintKey: 'auth_login.kimi_oauth_hint', urlLabelKey: 'auth_login.kimi_oauth_url_label', icon: { light: iconKimiLight, dark: iconKimiDark } },
   { id: 'qwen', titleKey: 'auth_login.qwen_oauth_title', hintKey: 'auth_login.qwen_oauth_hint', urlLabelKey: 'auth_login.qwen_oauth_url_label', icon: iconQwen }
 ];
@@ -134,6 +138,15 @@ export function OAuthPage() {
           showNotification(t(getAuthKey(provider, 'oauth_status_success')), 'success');
           window.clearInterval(timer);
           delete timers.current[provider];
+        } else if (res.status === 'device_code') {
+          updateProviderState(provider, {
+            userCode: res.user_code,
+            verificationUrl: res.verification_url
+          });
+        } else if (res.status === 'auth_url') {
+          updateProviderState(provider, {
+            url: res.url
+          });
         } else if (res.status === 'error') {
           updateProviderState(provider, { status: 'error', error: res.error, polling: false });
           showNotification(
@@ -164,14 +177,23 @@ export function OAuthPage() {
       error: undefined,
       callbackStatus: undefined,
       callbackError: undefined,
-      callbackUrl: ''
+      callbackUrl: '',
+      userCode: undefined,
+      verificationUrl: undefined
     });
     try {
       const res = await oauthApi.startAuth(
         provider,
         provider === 'gemini-cli' ? { projectId: projectId || undefined } : undefined
       );
-      updateProviderState(provider, { url: res.url, state: res.state, status: 'waiting', polling: true });
+      updateProviderState(provider, {
+        url: res.url,
+        state: res.state,
+        status: 'waiting',
+        polling: true,
+        userCode: res.user_code,
+        verificationUrl: res.verification_uri
+      });
       if (res.state) {
         startPolling(provider, res.state);
       }
@@ -392,6 +414,33 @@ export function OAuthPage() {
                         >
                           {t(getAuthKey(provider.id, 'open_link'))}
                         </Button>
+                      </div>
+                    </div>
+                  )}
+                  {state.userCode && (
+                    <div className={styles.deviceCodeBox}>
+                      <div className={styles.deviceCodeLabel}>{t('auth_login.device_code_label')}</div>
+                      <div className={styles.deviceCodeValue}>{state.userCode}</div>
+                      <div className={styles.cardHintSecondary}>{t('auth_login.device_code_hint')}</div>
+                      <div className={styles.authUrlActions}>
+                        <Button variant="secondary" size="sm" onClick={() => copyLink(state.userCode)}>
+                          {t('auth_login.device_code_copy')}
+                        </Button>
+                        {(state.verificationUrl || state.url) && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() =>
+                              window.open(
+                                state.verificationUrl || state.url || '',
+                                '_blank',
+                                'noopener,noreferrer'
+                              )
+                            }
+                          >
+                            {t(getAuthKey(provider.id, 'open_link'))}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}

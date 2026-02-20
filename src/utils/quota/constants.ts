@@ -34,6 +34,14 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
     light: { bg: '#fff3e0', text: '#ef6c00' },
     dark: { bg: '#e65100', text: '#ffb74d' },
   },
+  github: {
+    light: { bg: '#eef2ff', text: '#3730a3' },
+    dark: { bg: '#312e81', text: '#c7d2fe' },
+  },
+  'github-copilot': {
+    light: { bg: '#eef2ff', text: '#3730a3' },
+    dark: { bg: '#312e81', text: '#c7d2fe' },
+  },
   antigravity: {
     light: { bg: '#e0f7fa', text: '#006064' },
     dark: { bg: '#004d40', text: '#80deea' },

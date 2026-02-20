@@ -9,12 +9,16 @@ export type OAuthProvider =
   | 'anthropic'
   | 'antigravity'
   | 'gemini-cli'
+  | 'github-copilot'
   | 'kimi'
   | 'qwen';
 
 export interface OAuthStartResponse {
   url: string;
   state?: string;
+  user_code?: string;
+  verification_uri?: string;
+  method?: string;
 }
 
 export interface OAuthCallbackResponse {
@@ -31,8 +35,20 @@ export interface IFlowCookieAuthResponse {
 }
 
 const WEBUI_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
+const START_PATH_MAP: Partial<Record<OAuthProvider, string>> = {
+  'github-copilot': '/github-auth-url'
+};
 const CALLBACK_PROVIDER_MAP: Partial<Record<OAuthProvider, string>> = {
-  'gemini-cli': 'gemini'
+  'gemini-cli': 'gemini',
+  'github-copilot': 'github'
+};
+
+type OAuthStatusResponse = {
+  status: 'ok' | 'wait' | 'error' | 'device_code' | 'auth_url';
+  error?: string;
+  user_code?: string;
+  verification_url?: string;
+  url?: string;
 };
 
 export const oauthApi = {
@@ -44,13 +60,14 @@ export const oauthApi = {
     if (provider === 'gemini-cli' && options?.projectId) {
       params.project_id = options.projectId;
     }
-    return apiClient.get<OAuthStartResponse>(`/${provider}-auth-url`, {
+    const path = START_PATH_MAP[provider] ?? `/${provider}-auth-url`;
+    return apiClient.get<OAuthStartResponse>(path, {
       params: Object.keys(params).length ? params : undefined
     });
   },
 
   getAuthStatus: (state: string) =>
-    apiClient.get<{ status: 'ok' | 'wait' | 'error'; error?: string }>(`/get-auth-status`, {
+    apiClient.get<OAuthStatusResponse>(`/get-auth-status`, {
       params: { state }
     }),
 

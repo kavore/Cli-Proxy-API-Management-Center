@@ -28,6 +28,7 @@ const OAUTH_PROVIDER_PRESETS = [
   'antigravity',
   'claude',
   'codex',
+  'github-copilot',
   'qwen',
   'kimi',
   'iflow',
@@ -35,7 +36,15 @@ const OAUTH_PROVIDER_PRESETS = [
 
 const OAUTH_PROVIDER_EXCLUDES = new Set(['all', 'unknown', 'empty']);
 
-const normalizeProviderKey = (value: string) => value.trim().toLowerCase();
+const OAUTH_PROVIDER_ALIASES: Record<string, string> = {
+  github: 'github-copilot',
+  copilot: 'github-copilot'
+};
+
+const normalizeProviderKey = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return OAUTH_PROVIDER_ALIASES[normalized] ?? normalized;
+};
 
 const buildEmptyMappingEntry = (): OAuthModelMappingFormEntry => ({
   id: generateId(),
@@ -100,8 +109,8 @@ export function AuthFilesOAuthModelAliasEditPage() {
     });
 
     const normalizedExtras = Array.from(extraProviders)
-      .map((value) => value.trim())
-      .filter((value) => value && !OAUTH_PROVIDER_EXCLUDES.has(value.toLowerCase()));
+      .map((value) => normalizeProviderKey(value))
+      .filter((value) => value && !OAUTH_PROVIDER_EXCLUDES.has(value));
 
     const baseSet = new Set(OAUTH_PROVIDER_PRESETS.map((value) => value.toLowerCase()));
     const extraList = normalizedExtras
@@ -116,7 +125,9 @@ export function AuthFilesOAuthModelAliasEditPage() {
       const key = `auth_files.filter_${type}`;
       const translated = t(key);
       if (translated !== key) return translated;
-      if (type.toLowerCase() === 'iflow') return 'iFlow';
+      const normalizedType = type.toLowerCase();
+      if (normalizedType === 'iflow') return 'iFlow';
+      if (normalizedType === 'github' || normalizedType === 'github-copilot') return 'GitHub Copilot';
       return type.charAt(0).toUpperCase() + type.slice(1);
     },
     [t]
